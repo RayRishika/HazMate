@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HazMate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <header class="bg-green-600 text-white text-center p-6 shadow-lg">
+        <h1 class="text-4xl font-bold">HazMate</h1>
+    </header>
+
+    <!-- Hero Section with Background Image -->
+    <section class="relative flex flex-col items-center justify-center h-screen bg-cover bg-center" style="background-image: url('/photos/pic_3.jpg');">
+        <div class="absolute inset-0 bg-green-900 bg-opacity-50"></div> <!-- Overlay to improve text readability -->
+
+        <div class="relative z-10 text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-6 text-white">Discover Eco-Friendly Alternatives</h2>
+            <p class="text-lg md:text-xl text-white mb-8 max-w-2xl mx-auto">Find information on hazardous chemicals and explore safer, greener options for your business.</p>
+            <a href="chatbot.html" class="bg-green-600 text-white py-3 px-6 rounded-full text-lg hover:bg-green-700 transition-all">Chat Now</a>
+        </div>
+
+        <!-- Add some images/icons -->
+        <div class="relative z-10 mt-12 flex flex-wrap justify-center gap-8">
+            <img src="/photos/pic_4.jpeg" alt="Eco-friendly" class="w-32 h-32 object-cover rounded-lg shadow-md">
+            <img src="/photos/pic_6.jpeg" alt="Chemical Alternatives" class="w-32 h-32 object-cover rounded-lg shadow-md">
+            <img src="/photos/pic_7.jpeg" alt="Sustainability" class="w-32 h-32 object-cover rounded-lg shadow-md">
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="bg-white py-16">
+        <div class="max-w-6xl mx-auto text-center">
+            <h3 class="text-3xl font-bold text-green-900 mb-8">Why Choose HazMate?</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="p-6 bg-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all">
+                    <img src="/photos/pic_8.jpeg" alt="Fast Access" class="mx-auto mb-4">
+                    <h4 class="text-2xl font-semibold mb-2">Fast Access to Data</h4>
+                    <p class="text-gray-700">Get instant information on hazardous chemicals and their eco-friendly alternatives at your fingertips.</p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="p-6 bg-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all">
+                    <img src="/photos/pic_9.jpeg" alt="Eco-Friendly" class="mx-auto mb-4">
+                    <h4 class="text-2xl font-semibold mb-2">Eco-Friendly Alternatives</h4>
+                    <p class="text-gray-700">Find safer, sustainable alternatives to protect the environment and ensure safety.</p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="p-6 bg-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all">
+                    <img src="/photos/pic_10.jpeg" alt="Safe for You" class="mx-auto mb-4">
+                    <h4 class="text-2xl font-semibold mb-2">Safe for You and the Planet</h4>
+                    <p class="text-gray-700">All alternatives are selected with the well-being of the environment and public health in mind.</p>
+                </div>
+            </div>
+        </div>
+        <div class="relative w-96 h-64 flex items-center justify-center mx-auto mt-10 rounded-3xl overflow-hidden">
+            <img src="/photos/pic_1.jpg" alt="" class="w-full h-full object-cover">
+            <p class="absolute inset-0 flex items-center justify-center text-white text-xl font-bold bg-black bg-opacity-50">
+                For the crazy does not need to hazardous 
+                <br />-Rishika Ray (author)
+            </p>
+        </div>
+        
+    </section>
+
+    <footer class="bg-green-600 text-white text-center p-4">
+        <p>&copy; 2024 HazMate</p>
+    </footer>
+</body>
+</html>
