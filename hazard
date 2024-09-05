@@ -1,0 +1,196 @@
+import gradio as gr
+import pandas as pd
+#import openpyxl
+from langchain_community.chat_models import ChatOpenAI
+from langchain.memory import ConversationSummaryBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+import pdfplumber
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+#from queue import SimpleQueue
+from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain.schema import Document
+from operator import itemgetter
+import os
+
+# Load environment variables or set keys manually
+openai_api_key = os.environ.get('OPENAI_API_KEY')
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+openai_model = "gpt-4o"
+
+# Set up file processing for PDFs, CSVs, and Excel
+def setup_qa_chain(file_paths):
+    docs = []
+    for file_path in file_paths:
+        if file_path.endswith(".pdf"):
+            with pdfplumber.open(file_path) as pdf:
+                text = ""
+                for page in pdf.pages:
+                    text += page.extract_text()  # Extract text from each page
+                doc = Document(page_content=text, metadata={"source": file_path})
+                docs.append(doc)
+        elif file_path.endswith(".csv"):
+            df = pd.read_csv(file_path)
+            text = df.to_string()  # Convert DataFrame to string
+            doc = Document(page_content=text, metadata={"source": file_path})
+            docs.append(doc)
+        elif file_path.endswith(".xls") or file_path.endswith(".xlsx"):
+            df = pd.read_excel(file_path)
+            text = df.to_string()  # Convert DataFrame to string
+            doc = Document(page_content=text, metadata={"source": file_path})
+            docs.append(doc)
+            
+    return docs
+
+# Split long documents for processing
+def split_docs(docs):
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    return text_splitter.split_documents(docs)
+
+# Create embeddings for document similarity search
+def create_embeddings(docs, openai_api_key):
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    vectordb = FAISS.from_documents(docs, embeddings)
+    return vectordb
+
+# Set up document retriever
+def create_retriever(vectordb):
+    retriever = vectordb.as_retriever(search_type='mmr')
+    return retriever
+
+# Set up memory to retain chat history
+def create_memory():
+    memory = ConversationSummaryBufferMemory(
+        memory_key='chat_history',
+        output_key='answer',
+        llm=ChatOpenAI(model_name=openai_model, temperature=0.7, openai_api_key=openai_api_key),
+        return_messages=True
+    )
+    return memory
+
+# Create the QA chain with memory and retriever
+def create_qa_chain(file_paths, openai_model, openai_api_key):
+    docs = setup_qa_chain(file_paths)
+    docs = split_docs(docs)
+    vectordb = create_embeddings(docs, openai_api_key)
+    retriever = create_retriever(vectordb)
+    memory = create_memory()
+
+    llm_defined = ChatOpenAI(model_name=openai_model, temperature=0.7, openai_api_key=openai_api_key)
+    
+    qa_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm_defined,
+        retriever=retriever,
+        memory=memory,
+        return_source_documents=True,
+        verbose=True
+    )
+    return qa_chain
+
+if __name__ == "__main__":
+    # Define file paths
+    files = [
+        r"C:\Toko\HackX\PAN_HHP_List.pdf",
+        r"C:\Toko\HackX\ChemScore-2021-Key-results.pdf",
+        r"C:\Toko\HackX\SinList.xlsx",
+        r"C:\Toko\HackX\toxic-chemicals-vulnerable-populations-report.pdf"
+    ]
+    
+    # Setup the QA chain
+    qa_chain = create_qa_chain(files, openai_model, openai_api_key)
+
+# Professional and humorous prompt template for HazMate
+template = "Hey there, I'm HazMate - your go-to bot for hazardous chemicals and eco-friendly alternatives. You asked about: '{question}'. Let's dive into it!"
+
+prompt = PromptTemplate.from_template(template)
+memory = ConversationSummaryBufferMemory(
+        memory_key='history',
+        return_messages=True,
+        llm=ChatOpenAI(model_name=openai_model, temperature=0.7, openai_api_key=openai_api_key)
+    )
+
+llm = ChatOpenAI(model_name=openai_model, temperature=0.7, openai_api_key=openai_api_key)
+
+# Processing QA chain output
+def process_qa_chain_output(output):
+    return str(output["answer"])  # Convert the answer to a string
+
+conversation_chain = (
+    RunnablePassthrough.assign(
+        history=RunnableLambda(memory.load_memory_variables) | itemgetter("history")
+    )
+    | prompt
+    | llm
+)
+
+# Gradio Interface for HazMate
+def bot(history):
+    """
+    Generates responses for a conversation history using the QA chain and fallback to general model.
+    """
+    if history and history[-1][0]:
+        user_input = history[-1][0]
+        inputs = {"question": user_input}
+        
+        # Using invoke to avoid deprecated methods
+        output = qa_chain.invoke(inputs)
+        answer = process_qa_chain_output(output)
+        
+        # Fallback if answer is not adequate
+        if not answer or answer in ['No relevant information found', "I don't know"]:
+            answer = ask_general_question(user_input)
+        
+        history[-1][1] = answer
+    return history
+
+def ask_general_question(question):
+    response = ChatOpenAI.ChatCompletion.create(
+        model="gpt-4o", 
+        messages=[
+            {"role": "system", "content": "You are HazMate, an expert in hazardous chemicals and their alternatives."},
+            {"role": "user", "content": question}
+        ]
+    )
+    return response.choices[0].message['content']
+
+# Clear chat history
+def clear_history():
+    memory.clear()
+
+with gr.Blocks() as demo:
+    with gr.Row():
+        gr.Markdown("<h1 style='text-align: center; width: 100%;'>HazMate: Your Friendly Chemical Safety Expert</h1>")
+        
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Markdown("**Welcome to HazMate, your one-stop solution for all things hazardous chemicals!**")
+            gr.Markdown("""I'm here to answer questions about hazardous substances and their eco-friendly alternatives. 
+            Don't worry - I'll keep it professional, but I might sprinkle in a joke or two. 
+            Let's keep the world safe, one chemical at a time! 🌍💡""")
+                        
+        with gr.Column(scale=3):
+            ex = ["What are some eco-friendly alternatives to lead-based paints?",
+                   "Tell me about toxic chemicals in cleaning products.",
+                   "What are the eco-friendly alternatives to asbestos in construction?",
+                   "Why is cadmium in electronics harmful, and what are some green replacements?"
+                ]
+            chatbot = gr.Chatbot()
+            msg = gr.Textbox(label="Ask HazMate:", placeholder="Enter your question here")
+            gr.Examples(ex, msg)
+            clear = gr.Button("Clear Chat History")
+
+            msg.submit(lambda user_message, history: [user_message, history + [[user_message, None]]],
+                        [msg, chatbot], [msg, chatbot], queue=False).then(bot, chatbot, chatbot, queue=False)
+
+            clear.click(fn=clear_history, inputs=None, outputs=chatbot, queue=False)
+
+demo.queue()
+demo.launch(share=True)
+
+from pyngrok import ngrok
+
+public_url = ngrok.connect(7860)  # Assuming Gradio is running on port 7860
+print(f"Public URL: {public_url}")
+
